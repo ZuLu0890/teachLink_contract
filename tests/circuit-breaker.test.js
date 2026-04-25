@@ -40,29 +40,13 @@ describe('CircuitBreaker', () => {
   
   describe('Failure threshold', () => {
     test('should open circuit after failure threshold is reached', async () => {
-      // Fail 3 times to reach threshold
-      for (let i = 0; i < 3; i++) {
-        try {
-          await circuitBreaker.execute(() => Promise.reject(new Error('test error')));
-        } catch (error) {
-          // Expected
-        }
-      }
-      
+      await failOperation(circuitBreaker, 3);
       expect(circuitBreaker.state).toBe('OPEN');
     });
     
     test('should reject requests when circuit is open', async () => {
-      // Open the circuit
-      for (let i = 0; i < 3; i++) {
-        try {
-          await circuitBreaker.execute(() => Promise.reject(new Error('test error')));
-        } catch (error) {
-          // Expected
-        }
-      }
+      await failOperation(circuitBreaker, 3);
       
-      // Try to execute another request
       try {
         await circuitBreaker.execute(() => Promise.resolve('success'));
         fail('Should have thrown an error');
@@ -74,21 +58,11 @@ describe('CircuitBreaker', () => {
   
   describe('Cooldown period', () => {
     test('should transition to HALF_OPEN after cooldown period', async () => {
-      // Open the circuit
-      for (let i = 0; i < 3; i++) {
-        try {
-          await circuitBreaker.execute(() => Promise.reject(new Error('test error')));
-        } catch (error) {
-          // Expected
-        }
-      }
-      
+      await failOperation(circuitBreaker, 3);
       expect(circuitBreaker.state).toBe('OPEN');
       
-      // Wait for cooldown period
       await new Promise(resolve => setTimeout(resolve, 1100));
       
-      // Next request should transition to HALF_OPEN
       try {
         await circuitBreaker.execute(() => Promise.resolve('success'));
       } catch (error) {
@@ -101,38 +75,18 @@ describe('CircuitBreaker', () => {
   
   describe('Gradual recovery', () => {
     test('should close circuit on successful operation in HALF_OPEN state', async () => {
-      // Open the circuit
-      for (let i = 0; i < 3; i++) {
-        try {
-          await circuitBreaker.execute(() => Promise.reject(new Error('test error')));
-        } catch (error) {
-          // Expected
-        }
-      }
-      
-      // Wait for cooldown period
+      await failOperation(circuitBreaker, 3);
       await new Promise(resolve => setTimeout(resolve, 1100));
       
-      // Execute successful operation to close circuit
       const result = await circuitBreaker.execute(() => Promise.resolve('success'));
       expect(result).toBe('success');
       expect(circuitBreaker.state).toBe('CLOSED');
     });
     
     test('should reopen circuit on failure in HALF_OPEN state', async () => {
-      // Open the circuit
-      for (let i = 0; i < 3; i++) {
-        try {
-          await circuitBreaker.execute(() => Promise.reject(new Error('test error')));
-        } catch (error) {
-          // Expected
-        }
-      }
-      
-      // Wait for cooldown period
+      await failOperation(circuitBreaker, 3);
       await new Promise(resolve => setTimeout(resolve, 1100));
       
-      // Execute failed operation to reopen circuit
       try {
         await circuitBreaker.execute(() => Promise.reject(new Error('test error')));
       } catch (error) {
@@ -171,18 +125,9 @@ describe('CircuitBreaker', () => {
   
   describe('Manual reset', () => {
     test('should allow manual reset', async () => {
-      // Open the circuit
-      for (let i = 0; i < 3; i++) {
-        try {
-          await circuitBreaker.execute(() => Promise.reject(new Error('test error')));
-        } catch (error) {
-          // Expected
-        }
-      }
-      
+      await failOperation(circuitBreaker, 3);
       expect(circuitBreaker.state).toBe('OPEN');
       
-      // Reset manually
       circuitBreaker.reset();
       
       expect(circuitBreaker.state).toBe('CLOSED');
@@ -191,3 +136,14 @@ describe('CircuitBreaker', () => {
     });
   });
 });
+
+// Helper function to fail operations
+async function failOperation(circuitBreaker, times) {
+  for (let i = 0; i < times; i++) {
+    try {
+      await circuitBreaker.execute(() => Promise.reject(new Error('test error')));
+    } catch (error) {
+      // Expected
+    }
+  }
+}

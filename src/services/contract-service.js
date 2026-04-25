@@ -23,84 +23,65 @@ class ContractService {
   async getContract(id) {
     return await this.circuitBreaker.execute(async () => {
       logger.info(`Fetching contract ${id}`);
-      
-      // Simulate external API call
-      const response = await axios.get(`${this.externalApiUrl}/${id}`, {
-        timeout: 5000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
+      return await this.makeApiRequest('get', `${this.externalApiUrl}/${id}`);
     });
   }
   
   async createContract(contractData) {
     return await this.circuitBreaker.execute(async () => {
       logger.info('Creating new contract');
-      
-      // Simulate external API call
-      const response = await axios.post(this.externalApiUrl, contractData, {
-        timeout: 5000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
+      return await this.makeApiRequest('post', this.externalApiUrl, contractData);
     });
   }
   
   async updateContract(id, contractData) {
     return await this.circuitBreaker.execute(async () => {
       logger.info(`Updating contract ${id}`);
-      
-      const response = await axios.put(`${this.externalApiUrl}/${id}`, contractData, {
-        timeout: 5000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
+      return await this.makeApiRequest('put', `${this.externalApiUrl}/${id}`, contractData);
     });
   }
   
   async deleteContract(id) {
     return await this.circuitBreaker.execute(async () => {
       logger.info(`Deleting contract ${id}`);
-      
-      const response = await axios.delete(`${this.externalApiUrl}/${id}`, {
-        timeout: 5000
-      });
-      
-      return response.data;
+      return await this.makeApiRequest('delete', `${this.externalApiUrl}/${id}`);
     });
   }
   
   async listContracts(filters = {}) {
     return await this.circuitBreaker.execute(async () => {
       logger.info('Listing contracts with filters:', filters);
-      
-      const response = await axios.get(this.externalApiUrl, {
-        timeout: 5000,
-        params: filters,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
+      return await this.makeApiRequest('get', this.externalApiUrl, null, filters);
     });
   }
   
-  // Method to simulate failures for testing
   async simulateFailure() {
     return await this.circuitBreaker.execute(async () => {
       logger.warn('Simulating a failure for testing');
       throw new Error('Simulated failure for circuit breaker testing');
     });
+  }
+
+  async makeApiRequest(method, url, data = null, params = null) {
+    const config = {
+      timeout: 5000,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    if (params) {
+      config.params = params;
+    }
+
+    const response = await axios({
+      method,
+      url,
+      data,
+      ...config
+    });
+
+    return response.data;
   }
 }
 

@@ -26,24 +26,40 @@ class CircuitBreaker extends EventEmitter {
     this.requestCount++;
     
     if (this.state === 'OPEN') {
-      if (this.shouldAttemptReset()) {
-        this.state = 'HALF_OPEN';
-        logger.info('Circuit breaker transitioning to HALF_OPEN state');
-        this.emit('stateChange', 'HALF_OPEN');
-      } else {
-        const error = new Error('Circuit breaker is OPEN - request rejected');
-        error.code = 'CIRCUIT_BREAKER_OPEN';
-        throw error;
-      }
+      this.handleOpenState();
     }
     
-    // Check if request should be allowed in HALF_OPEN state for gradual recovery
+    this.validateRequestAllowed();
+    
+    return await this.executeOperation(operation);
+  }
+
+  handleOpenState() {
+    if (this.shouldAttemptReset()) {
+      this.transitionToHalfOpen();
+      return;
+    }
+    
+    const error = new Error('Circuit breaker is OPEN - request rejected');
+    error.code = 'CIRCUIT_BREAKER_OPEN';
+    throw error;
+  }
+
+  transitionToHalfOpen() {
+    this.state = 'HALF_OPEN';
+    logger.info('Circuit breaker transitioning to HALF_OPEN state');
+    this.emit('stateChange', 'HALF_OPEN');
+  }
+
+  validateRequestAllowed() {
     if (!this.shouldAllowRequest()) {
       const error = new Error('Circuit breaker is in HALF_OPEN state - request rate limited');
       error.code = 'CIRCUIT_BREAKER_HALF_OPEN';
       throw error;
     }
-    
+  }
+
+  async executeOperation(operation) {
     try {
       const result = await operation();
       this.onSuccess();
@@ -59,19 +75,26 @@ class CircuitBreaker extends EventEmitter {
     this.lastSuccessTime = Date.now();
     
     if (this.state === 'HALF_OPEN') {
-      this.state = 'CLOSED';
-      this.failureCount = 0;
-      this.successCount = 0;
-      logger.info('Circuit breaker transitioning to CLOSED state - service recovered');
-      this.emit('stateChange', 'CLOSED');
+      this.transitionToClosed();
     } else if (this.state === 'CLOSED') {
-      // Gradual recovery - reduce failure count on success
-      if (this.failureCount > 0) {
-        this.failureCount = Math.max(0, this.failureCount - 1);
-      }
+      this.reduceFailureCount();
     }
     
     this.emit('success');
+  }
+
+  transitionToClosed() {
+    this.state = 'CLOSED';
+    this.failureCount = 0;
+    this.successCount = 0;
+    logger.info('Circuit breaker transitioning to CLOSED state - service recovered');
+    this.emit('stateChange', 'CLOSED');
+  }
+
+  reduceFailureCount() {
+    if (this.failureCount > 0) {
+      this.failureCount = Math.max(0, this.failureCount - 1);
+    }
   }
   
   onFailure() {
@@ -81,16 +104,19 @@ class CircuitBreaker extends EventEmitter {
     logger.warn(`Circuit breaker failure count: ${this.failureCount}/${this.failureThreshold}`);
     
     if (this.state === 'HALF_OPEN') {
-      this.state = 'OPEN';
-      logger.warn('Circuit breaker transitioning back to OPEN state - half-open test failed');
-      this.emit('stateChange', 'OPEN');
+      this.transitionToOpen('half-open test failed');
     } else if (this.failureCount >= this.failureThreshold) {
-      this.state = 'OPEN';
-      logger.error('Circuit breaker transitioning to OPEN state - failure threshold reached');
-      this.emit('stateChange', 'OPEN');
+      this.transitionToOpen('failure threshold reached');
     }
     
     this.emit('failure');
+  }
+
+  transitionToOpen(reason) {
+    this.state = 'OPEN';
+    const logLevel = reason === 'half-open test failed' ? 'warn' : 'error';
+    logger[logLevel](`Circuit breaker transitioning to OPEN state - ${reason}`);
+    this.emit('stateChange', 'OPEN');
   }
   
   shouldAttemptReset() {
