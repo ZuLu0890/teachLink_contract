@@ -37,6 +37,13 @@ class CircuitBreaker extends EventEmitter {
       }
     }
     
+    // Check if request should be allowed in HALF_OPEN state for gradual recovery
+    if (!this.shouldAllowRequest()) {
+      const error = new Error('Circuit breaker is in HALF_OPEN state - request rate limited');
+      error.code = 'CIRCUIT_BREAKER_HALF_OPEN';
+      throw error;
+    }
+    
     try {
       const result = await operation();
       this.onSuccess();
