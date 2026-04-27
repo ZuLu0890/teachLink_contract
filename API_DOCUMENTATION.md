@@ -7,6 +7,8 @@ This document describes the automated API documentation implementation for the T
 The API documentation is implemented using:
 - **swagger-ui-express**: Serves the Swagger UI interface
 - **swagger-jsdoc**: Generates OpenAPI 3.0 specification from JSDoc comments
+- **js-yaml**: Export documentation in YAML format
+- **GitHub Actions**: Automated documentation generation in CI/CD
 
 ## Features
 
@@ -14,22 +16,28 @@ The API documentation is implemented using:
 - Documentation is automatically generated from JSDoc comments in the code
 - No manual maintenance of separate documentation files needed
 - Always in sync with the actual API implementation
+- Automatic generation on every push/PR via GitHub Actions
 
 ### ✅ Examples Included
 - Request/response examples for all endpoints
 - Schema definitions with example values
 - Parameter examples for query and path parameters
+- Interactive "Try it out" functionality enabled
 
 ### ✅ Version Tracking
-- API version defined in OpenAPI specification (currently v1.0.0)
+- API version dynamically pulled from package.json
+- Version-specific documentation exported to `docs/v{version}/` directory
 - Version information displayed in Swagger UI header
-- Easy to update version as API evolves
+- Easy to update version - just update package.json
+- Historical versions preserved in docs directory
 
 ### ✅ Search Functionality
 - Built-in search/filter in Swagger UI
 - Filter endpoints by tags (Health, Contracts)
 - Search operations by name
 - Alphabetically sorted tags and operations
+- Keyboard shortcut (Ctrl/Cmd + K) for quick search access
+- Enhanced search with custom JavaScript enhancements
 
 ## Accessing Documentation
 
@@ -67,6 +75,33 @@ npm start
 ```
 http://localhost:3000/api-docs
 ```
+
+## Generating Documentation
+
+### Manual Generation
+
+Generate OpenAPI specification files (JSON and YAML):
+```bash
+npm run docs:generate
+```
+
+This will create:
+- `docs/openapi.json` - OpenAPI specification in JSON format
+- `docs/openapi.yaml` - OpenAPI specification in YAML format
+- `docs/v{version}/openapi.json` - Version-specific documentation
+
+### Automated Generation
+
+Documentation is automatically generated via GitHub Actions on:
+- Push to main, develop, or feature branches
+- Pull requests to main or develop
+- Release publications
+
+The workflow:
+1. Installs dependencies
+2. Generates documentation files
+3. Uploads artifacts (retained for 30 days)
+4. Deploys to GitHub Pages on releases
 
 ## Adding Documentation to New Endpoints
 
@@ -116,6 +151,12 @@ The Swagger UI can be customized in `src/index.js`:
 
 ## Exporting Documentation
 
+### Via Script (Recommended)
+```bash
+npm run docs:generate
+```
+
+### Via API Endpoint
 To export the OpenAPI specification as JSON:
 ```bash
 curl http://localhost:3000/api-docs/swagger.json > openapi.json
@@ -125,3 +166,12 @@ To export as YAML:
 ```bash
 curl http://localhost:3000/api-docs/swagger.yaml > openapi.yaml
 ```
+
+## Version Management
+
+To update the API version:
+1. Update the version in `package.json`
+2. Run `npm run docs:generate` to create version-specific documentation
+3. Commit the changes
+
+The documentation will automatically reflect the new version in Swagger UI and create a new version-specific directory.

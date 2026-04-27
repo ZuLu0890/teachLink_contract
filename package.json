@@ -7,7 +7,9 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "docs:generate": "node scripts/generate-docs.js",
+    "docs:serve": "node src/index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -19,7 +21,8 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "nodemon": "^3.0.1",
-    "supertest": "^6.3.3"
+    "supertest": "^6.3.3",
+    "js-yaml": "^4.1.0"
   },
   "keywords": ["contract", "management", "circuit-breaker"],
   "author": "teachLink",

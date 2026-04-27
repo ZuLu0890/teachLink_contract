@@ -4,9 +4,13 @@ const ContractService = require('./services/contract-service');
 const logger = require('./utils/logger');
 const swaggerUi = require('swagger-ui-express');
 const specs = require('./swagger');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
+
+// Serve static files for custom Swagger UI enhancements
+app.use('/static', express.static(path.join(__dirname, 'static')));
 
 // Initialize circuit breaker
 const circuitBreaker = new CircuitBreaker({
@@ -337,6 +341,7 @@ app.post('/test/failure', async (req, res) => {
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customSiteTitle: 'TeachLink API Documentation',
   customCss: '.swagger-ui .topbar { display: none }',
+  customJs: '/static/swagger-search.js',
   swaggerOptions: {
     persistAuthorization: true,
     displayRequestDuration: true,
@@ -344,7 +349,14 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     filter: true,
     showRequestHeaders: true,
     tagsSorter: 'alpha',
-    operationsSorter: 'alpha'
+    operationsSorter: 'alpha',
+    tryItOutEnabled: true,
+    deepLinking: true,
+    displayOperationId: false,
+    defaultModelsExpandDepth: 1,
+    defaultModelExpandDepth: 1,
+    showExtensions: true,
+    showCommonExtensions: true
   }
 }));
 
