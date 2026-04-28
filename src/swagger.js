@@ -1,6 +1,91 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const package = require('../package.json');
 
+// Helper function to create contract properties
+const createContractProperties = () => ({
+  id: {
+    type: 'string',
+    description: 'Unique contract identifier',
+    example: 'contract-123'
+  },
+  title: {
+    type: 'string',
+    description: 'Contract title',
+    example: 'Service Agreement 2024'
+  },
+  status: {
+    type: 'string',
+    enum: ['draft', 'active', 'completed', 'cancelled'],
+    description: 'Contract status',
+    example: 'active'
+  },
+  amount: {
+    type: 'number',
+    description: 'Contract amount',
+    example: 50000.00
+  },
+  startDate: {
+    type: 'string',
+    format: 'date',
+    description: 'Contract start date',
+    example: '2024-01-01'
+  },
+  endDate: {
+    type: 'string',
+    format: 'date',
+    description: 'Contract end date',
+    example: '2024-12-31'
+  }
+});
+
+// Helper function to create circuit breaker properties
+const createCircuitBreakerProperties = () => ({
+  state: {
+    type: 'string',
+    enum: ['CLOSED', 'OPEN', 'HALF_OPEN'],
+    description: 'Circuit breaker state'
+  },
+  failureCount: {
+    type: 'integer',
+    description: 'Current failure count'
+  },
+  successCount: {
+    type: 'integer',
+    description: 'Current success count'
+  },
+  failureThreshold: {
+    type: 'integer',
+    description: 'Failure threshold before opening'
+  },
+  cooldownPeriod: {
+    type: 'integer',
+    description: 'Cooldown period in milliseconds'
+  },
+  lastFailureTime: {
+    type: 'integer',
+    nullable: true,
+    description: 'Timestamp of last failure'
+  },
+  lastSuccessTime: {
+    type: 'integer',
+    nullable: true,
+    description: 'Timestamp of last success'
+  },
+  requestCount: {
+    type: 'integer',
+    description: 'Request count in current monitoring period'
+  },
+  totalRequests: {
+    type: 'integer',
+    description: 'Total requests processed'
+  },
+  nextAttemptTime: {
+    type: 'integer',
+    nullable: true,
+    description: 'Timestamp when circuit breaker will attempt reset'
+  }
+});
+
 const options = {
   definition: {
     openapi: '3.0.0',
@@ -32,75 +117,16 @@ const options = {
         Contract: {
           type: 'object',
           required: ['id', 'title', 'status'],
-          properties: {
-            id: {
-              type: 'string',
-              description: 'Unique contract identifier',
-              example: 'contract-123'
-            },
-            title: {
-              type: 'string',
-              description: 'Contract title',
-              example: 'Service Agreement 2024'
-            },
-            status: {
-              type: 'string',
-              enum: ['draft', 'active', 'completed', 'cancelled'],
-              description: 'Contract status',
-              example: 'active'
-            },
-            amount: {
-              type: 'number',
-              description: 'Contract amount',
-              example: 50000.00
-            },
-            startDate: {
-              type: 'string',
-              format: 'date',
-              description: 'Contract start date',
-              example: '2024-01-01'
-            },
-            endDate: {
-              type: 'string',
-              format: 'date',
-              description: 'Contract end date',
-              example: '2024-12-31'
-            }
-          }
+          properties: createContractProperties()
         },
         CreateContractRequest: {
           type: 'object',
           required: ['title', 'status'],
-          properties: {
-            title: {
-              type: 'string',
-              description: 'Contract title',
-              example: 'Service Agreement 2024'
-            },
-            status: {
-              type: 'string',
-              enum: ['draft', 'active', 'completed', 'cancelled'],
-              description: 'Contract status',
-              example: 'draft'
-            },
-            amount: {
-              type: 'number',
-              description: 'Contract amount',
-              example: 50000.00
-            },
-            startDate: {
-              type: 'string',
-              format: 'date',
-              description: 'Contract start date',
-              example: '2024-01-01'
-            },
-            endDate: {
-              type: 'string',
-              format: 'date',
-              description: 'Contract end date',
-              example: '2024-12-31'
-            }
-          }
+          properties: (() => {
+            const props = createContractProperties();
+            const { id, ...requiredProps } = props;
+            return requiredProps;
+          })()
         },
         HealthResponse: {
           type: 'object',
@@ -111,52 +137,7 @@ const options = {
             },
             circuitBreaker: {
               type: 'object',
-              properties: {
-                state: {
-                  type: 'string',
-                  enum: ['CLOSED', 'OPEN', 'HALF_OPEN'],
-                  description: 'Circuit breaker state'
-                },
-                failureCount: {
-                  type: 'integer',
-                  description: 'Current failure count'
-                },
-                successCount: {
-                  type: 'integer',
-                  description: 'Current success count'
-                },
-                failureThreshold: {
-                  type: 'integer',
-                  description: 'Failure threshold before opening'
-                },
-                cooldownPeriod: {
-                  type: 'integer',
-                  description: 'Cooldown period in milliseconds'
-                },
-                lastFailureTime: {
-                  type: 'integer',
-                  nullable: true,
-                  description: 'Timestamp of last failure'
-                },
-                lastSuccessTime: {
-                  type: 'integer',
-                  nullable: true,
-                  description: 'Timestamp of last success'
-                },
-                requestCount: {
-                  type: 'integer',
-                  description: 'Request count in current monitoring period'
-                },
-                totalRequests: {
-                  type: 'integer',
-                  description: 'Total requests processed'
-                },
-                nextAttemptTime: {
-                  type: 'integer',
-                  nullable: true,
-                  description: 'Timestamp when circuit breaker will attempt reset'
-                }
-              }
+              properties: createCircuitBreakerProperties()
             }
           }
         },

@@ -22,6 +22,19 @@ const circuitBreaker = new CircuitBreaker({
 // Initialize contract service with circuit breaker
 const contractService = new ContractService(circuitBreaker);
 
+// Helper function for handling async route errors
+const asyncHandler = (fn) => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
+
+// Helper function for standard error responses
+const handleError = (error, res, message) => {
+  logger.error(message, error);
+  res.status(500).json({ error: error.message });
+};
+
 // Routes
 /**
  * @swagger
@@ -97,15 +110,10 @@ app.get('/health', (req, res) => {
  *             example:
  *               error: Contract not found
  */
-app.get('/contracts/:id', async (req, res) => {
-  try {
-    const contract = await contractService.getContract(req.params.id);
-    res.json(contract);
-  } catch (error) {
-    logger.error('Error fetching contract:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+app.get('/contracts/:id', asyncHandler(async (req, res) => {
+  const contract = await contractService.getContract(req.params.id);
+  res.json(contract);
+}));
 
 /**
  * @swagger
@@ -149,15 +157,10 @@ app.get('/contracts/:id', async (req, res) => {
  *             example:
  *               error: Failed to create contract
  */
-app.post('/contracts', async (req, res) => {
-  try {
-    const contract = await contractService.createContract(req.body);
-    res.status(201).json(contract);
-  } catch (error) {
-    logger.error('Error creating contract:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+app.post('/contracts', asyncHandler(async (req, res) => {
+  const contract = await contractService.createContract(req.body);
+  res.status(201).json(contract);
+}));
 
 /**
  * @swagger
@@ -198,15 +201,10 @@ app.post('/contracts', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.put('/contracts/:id', async (req, res) => {
-  try {
-    const contract = await contractService.updateContract(req.params.id, req.body);
-    res.json(contract);
-  } catch (error) {
-    logger.error('Error updating contract:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+app.put('/contracts/:id', asyncHandler(async (req, res) => {
+  const contract = await contractService.updateContract(req.params.id, req.body);
+  res.json(contract);
+}));
 
 /**
  * @swagger
@@ -241,15 +239,10 @@ app.put('/contracts/:id', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.delete('/contracts/:id', async (req, res) => {
-  try {
-    const result = await contractService.deleteContract(req.params.id);
-    res.json(result);
-  } catch (error) {
-    logger.error('Error deleting contract:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+app.delete('/contracts/:id', asyncHandler(async (req, res) => {
+  const result = await contractService.deleteContract(req.params.id);
+  res.json(result);
+}));
 
 /**
  * @swagger
@@ -302,15 +295,10 @@ app.delete('/contracts/:id', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.get('/contracts', async (req, res) => {
-  try {
-    const contracts = await contractService.listContracts(req.query);
-    res.json(contracts);
-  } catch (error) {
-    logger.error('Error listing contracts:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+app.get('/contracts', asyncHandler(async (req, res) => {
+  const contracts = await contractService.listContracts(req.query);
+  res.json(contracts);
+}));
 
 /**
  * @swagger
@@ -329,12 +317,14 @@ app.get('/contracts', async (req, res) => {
  *             example:
  *               error: Simulated failure for circuit breaker testing
  */
-app.post('/test/failure', async (req, res) => {
-  try {
-    await contractService.simulateFailure();
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+app.post('/test/failure', asyncHandler(async (req, res) => {
+  await contractService.simulateFailure();
+  res.status(500).json({ error: 'Simulated failure for circuit breaker testing' });
+}));
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  handleError(error, res, `Error in ${req.method} ${req.path}:`);
 });
 
 // API Documentation

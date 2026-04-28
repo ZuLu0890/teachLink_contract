@@ -26,11 +26,10 @@ class CircuitBreaker extends EventEmitter {
     this.requestCount++;
     
     if (this.state === 'OPEN') {
-      this.handleOpenState();
+      return this.handleOpenState();
     }
     
     this.validateRequestAllowed();
-    
     return await this.executeOperation(operation);
   }
 
@@ -52,6 +51,10 @@ class CircuitBreaker extends EventEmitter {
   }
 
   validateRequestAllowed() {
+    if (this.state !== 'HALF_OPEN') {
+      return;
+    }
+    
     if (!this.shouldAllowRequest()) {
       const error = new Error('Circuit breaker is in HALF_OPEN state - request rate limited');
       error.code = 'CIRCUIT_BREAKER_HALF_OPEN';
@@ -105,7 +108,10 @@ class CircuitBreaker extends EventEmitter {
     
     if (this.state === 'HALF_OPEN') {
       this.transitionToOpen('half-open test failed');
-    } else if (this.failureCount >= this.failureThreshold) {
+      return;
+    }
+    
+    if (this.failureCount >= this.failureThreshold) {
       this.transitionToOpen('failure threshold reached');
     }
     
@@ -163,7 +169,6 @@ class CircuitBreaker extends EventEmitter {
       return true;
     }
     
-    // Allow 1 request per monitoring period initially, then gradually increase
     const timeSinceHalfOpen = Date.now() - (this.lastFailureTime || Date.now());
     const allowedRequests = Math.floor(timeSinceHalfOpen / this.monitoringPeriod) + 1;
     
